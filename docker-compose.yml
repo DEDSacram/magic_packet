@@ -1,0 +1,35 @@
+services:
+  wol-web:
+    build: .
+    container_name: wol-web
+    restart: unless-stopped
+    # Host networking is required: the magic packet is a UDP broadcast that must
+    # leave on the real LAN interface, not a docker bridge.
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      HOST: 127.0.0.1
+      PORT: 8099
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: wol-tunnel
+    restart: unless-stopped
+    # Shares the host network namespace, so it can reach wol-web on 127.0.0.1.
+    network_mode: host
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - wol-web
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
